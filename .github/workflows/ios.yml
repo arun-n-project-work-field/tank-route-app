@@ -1,34 +1,46 @@
 name: Build iOS IPA
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
-  build:
+  build-ios:
+    name: Build iOS IPA
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1️⃣ Checkout the repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # 2️⃣ Setup Flutter with the correct version
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.6'   # <-- specify exact version
+          flutter-version: '3.41.2'  # ✅ Flutter version with Dart >=3.11
           channel: 'stable'
           architecture: x64
 
-      - name: Install dependencies
+      # 3️⃣ Install dependencies
+      - name: Flutter Pub Get
         run: flutter pub get
 
-      - name: Build iOS (no codesign)
+      # 4️⃣ Build iOS without codesigning
+      - name: Build iOS App (Release)
         run: flutter build ios --release --no-codesign
 
+      # 5️⃣ Package the IPA manually
       - name: Create IPA
         run: |
-          mkdir Payload
-          cp -r build/ios/iphoneos/Runner.app Payload
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r app.ipa Payload
+          ls -lh app.ipa
 
+      # 6️⃣ Upload IPA as artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
