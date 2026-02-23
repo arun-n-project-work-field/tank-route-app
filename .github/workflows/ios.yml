@@ -2,9 +2,9 @@ name: Build iOS IPA
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build_ios:
@@ -12,41 +12,39 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1️⃣ Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Flutter (version compatible with your Dart SDK)
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.2'
 
-      # 3️⃣ Fetch Flutter dependencies
-      - name: Install Flutter packages
+      - name: Upgrade Flutter packages
         run: flutter pub get
 
-      # 4️⃣ Ensure iOS deployment target is at least 14.0
-      - name: Set iOS Deployment Target to 14.0
+      - name: Ensure iOS deployment target is 14.0
         run: |
-          sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/g" ios/Podfile || echo "platform :ios, '14.0'" >> ios/Podfile
+          if ! grep -q "platform :ios" ios/Podfile; then
+            sed -i '' "1i\\
+platform :ios, '14.0'
+" ios/Podfile
+          else
+            sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/g" ios/Podfile
+          fi
 
-      # 5️⃣ Install CocoaPods dependencies
-      - name: Install CocoaPods
+      - name: Install CocoaPods dependencies
         run: |
           cd ios
           pod repo update
           pod install
           cd ..
 
-      # 6️⃣ Build unsigned IPA
-      - name: Build unsigned IPA
+      - name: Build iOS IPA (unsigned)
         run: flutter build ipa --release --no-codesign
 
-      # 7️⃣ Upload the generated .ipa as artifact
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-ipa
-          path: build/ios/ipa/Runner.ipa
-
+          path: build/ios/ipa/*.ipa
