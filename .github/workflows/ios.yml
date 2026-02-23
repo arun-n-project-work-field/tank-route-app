@@ -2,9 +2,9 @@ name: Build iOS IPA
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
 
 jobs:
   build_ios:
@@ -18,19 +18,18 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'
+          flutter-version: '3.41.2'  # Match your Dart SDK
 
       - name: Upgrade Flutter packages
         run: flutter pub get
 
       - name: Ensure iOS deployment target is 14.0
         run: |
-          if ! grep -q "platform :ios" ios/Podfile; then
-            sed -i '' "1i\\
-platform :ios, '14.0'
-" ios/Podfile
-          else
+          if grep -q "platform :ios" ios/Podfile; then
             sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/g" ios/Podfile
+          else
+            echo "platform :ios, '14.0'" | cat - ios/Podfile > ios/Podfile.tmp
+            mv ios/Podfile.tmp ios/Podfile
           fi
 
       - name: Install CocoaPods dependencies
@@ -40,11 +39,18 @@ platform :ios, '14.0'
           pod install
           cd ..
 
-      - name: Build iOS IPA (unsigned)
-        run: flutter build ipa --release --no-codesign
+      - name: Build iOS IPA (no code signing)
+        run: flutter build ios --release --no-codesign
+
+      - name: Create .ipa from .app
+        run: |
+          mkdir -p build/ios/ipa
+          xcrun -sdk iphoneos PackageApplication \
+            -v build/ios/iphoneos/Runner.app \
+            -o build/ios/ipa/Runner.ipa || true
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-ipa
-          path: build/ios/ipa/*.ipa
+          path: build/ios/ipa/Runner.ipa
