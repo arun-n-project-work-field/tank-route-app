@@ -18,7 +18,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.2'  # Make sure it matches your Dart SDK requirement
+          flutter-version: '3.41.2'
 
       - name: Upgrade Flutter packages
         run: flutter pub get
@@ -26,7 +26,6 @@ jobs:
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          rm -rf Pods Podfile.lock
           pod repo update
           pod install
           cd ..
@@ -34,15 +33,8 @@ jobs:
       - name: Build iOS IPA (no code signing)
         run: flutter build ios --release --no-codesign
 
-      - name: Package .app into .ipa
-        run: |
-          mkdir -p build/ios/ipa
-          xcrun -sdk iphoneos PackageApplication \
-            -v build/ios/iphoneos/Runner.app \
-            -o $PWD/build/ios/ipa/Runner.ipa || true
-
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-ipa
-          path: build/ios/ipa/Runner.ipa
+          path: build/ios/ipa/*.ipa
